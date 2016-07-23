@@ -130,7 +130,7 @@ def run():
     for index, walker in enumerate(fake_ohlc_sample(start_time, 100., mu_pct=0, sigma_pct=20, sample_unit='minute')):
         ts, px_open, px_high, px_low, px_close = walker
         logging.debug('%s, ohlc values = %.3f, %.3f, %.3f, %.3f', ts, px_open, px_high, px_low, px_close)
-        if index == 8 * 60:
+        if index == 8 * 60 - 1:
             break
 
         if px_ref:
