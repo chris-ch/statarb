@@ -1,3 +1,4 @@
+import csv
 from datetime import datetime, timedelta
 import math
 import argparse
@@ -130,7 +131,7 @@ def run():
     for index, walker in enumerate(fake_ohlc_sample(start_time, 100., mu_pct=0, sigma_pct=20, sample_unit='minute')):
         ts, px_open, px_high, px_low, px_close = walker
         logging.debug('%s, ohlc values = %.3f, %.3f, %.3f, %.3f', ts, px_open, px_high, px_low, px_close)
-        if index == 8 * 60:
+        if index == 8 * 60 - 1:
             break
 
         if px_ref:
@@ -155,6 +156,7 @@ def run():
         drawdown = px_drawdown - px_ref
 
     logging.info('sold (%s) at %.4f, profit: %.2f, drawdown: %.2f', ts, px_sell, profit, drawdown)
+    return {'target_reached': target_reached, 'timestamp': ts, 'px_sell': px_sell, 'profit': profit, 'drawdown': drawdown}
 
 
 if __name__ == '__main__':
@@ -167,4 +169,9 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                      )
     args = parser.parse_args()
-    run()
+    with open('results.csv', 'w') as results_file:
+        header = ['target_reached', 'timestamp', 'px_sell', 'profit', 'drawdown']
+        writer = csv.DictWriter(results_file, fieldnames=header)
+        for i in range(100):
+            result = run()
+            writer.writerow(result)
