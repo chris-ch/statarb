@@ -1,0 +1,12 @@
+<application>
+  <component name="PySdkService">
+    <option name="REMOVED_SDKS">
+      <set>
+        <option value="/System/Library/Frameworks/Python.framework/Versions/2.6/bin/python2.6" />
+        <option value="$USER_HOME$/.ve/hdp-map/bin/python" />
+        <option value="$USER_HOME$/grupobimbo/bin/python" />
+        <option value="$USER_HOME$/webscrapping/bin/python" />
+      </set>
+    </option>
+  </component>
+</application>
