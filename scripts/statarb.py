@@ -1,5 +1,6 @@
 import csv
-from datetime import datetime, timedelta
+import sys
+from datetime import datetime, timedelta, date
 import math
 import argparse
 import logging
@@ -7,6 +8,7 @@ import random
 
 from decimal import Decimal
 
+import pandas
 from matplotlib import pyplot
 
 _RESOLUTION = 3
@@ -95,17 +97,6 @@ def fake_ohlc_sec(init_time, init_value, mu_pct, sigma_pct):
             px_close = px_mid
 
 
-def fake_ohlc_hour(init_time, init_value, mu_pct, sigma_pct):
-    current_hour = None
-    for current_time, px_open, px_high, px_low, px_close in fake_ohlc_sec(init_time, init_value, mu_pct, sigma_pct):
-        if not current_hour:
-            current_hour = current_time.hour
-
-        if current_hour != current_time.hour:
-            current_hour = current_time.hour
-            yield current_time, px_open, px_high, px_low, px_close
-
-
 def fake_ohlc_sample(init_time, init_value, mu_pct, sigma_pct, sample_unit='minute'):
     """
 
@@ -120,10 +111,16 @@ def fake_ohlc_sample(init_time, init_value, mu_pct, sigma_pct, sample_unit='minu
     for current_time, px_open, px_high, px_low, px_close in fake_ohlc_sec(init_time, init_value, mu_pct, sigma_pct):
         if not current_sample:
             current_sample = getattr(current_time, sample_unit)
+            sample_px_open = sample_px_high = sample_px_low = px_open
 
         if current_sample != getattr(current_time, sample_unit):
             current_sample = getattr(current_time, sample_unit)
-            yield current_time, px_open, px_high, px_low, px_close
+            yield current_time, sample_px_open, sample_px_high, sample_px_low, px_close
+            sample_px_open = sample_px_high = sample_px_low = px_open
+
+        else:
+            sample_px_high = max(sample_px_high, px_high)
+            sample_px_low = min(sample_px_low, px_low)
 
 
 def run():
@@ -161,6 +158,79 @@ def run():
     return {'target_reached': target_reached, 'timestamp': ts, 'px_sell': px_sell, 'profit': profit, 'drawdown': drawdown}
 
 
+def plot_ohlc():
+    from matplotlib import pyplot
+    from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY, date2num, num2date
+    from matplotlib import finance
+    import numpy
+
+    start_time = datetime(2010, 1, 1, 9)
+    quotes_list = list()
+    for index, walker in enumerate(fake_ohlc_sample(start_time, 100., mu_pct=0, sigma_pct=20, sample_unit='minute')):
+        ts, px_open, px_high, px_low, px_close = walker
+        quotes_list.append((date2num(ts), float(px_open), float(px_high), float(px_low), float(px_close)))
+        if index == 8 * 60 - 1:
+            break
+
+    quotes = numpy.array(quotes_list)
+    pyplot.style.use('ggplot')
+
+    mondays = WeekdayLocator(MONDAY)  # major ticks on the mondays
+    alldays = DayLocator()  # minor ticks on the days
+    #week_formatter = DateFormatter('%b %d')  # e.g., Jan 12
+    #day_formatter = DateFormatter('%d')  # e.g., 12
+    #hour_formatter = DateFormatter('%H')
+
+    #fig, ax = pyplot.subplots()
+    #fig.subplots_adjust(bottom=0.2)
+    #ax.xaxis.set_major_locator(mondays)
+    #ax.xaxis.set_minor_locator(alldays)
+    #ax.xaxis.set_major_formatter(week_formatter)
+    #ax.xaxis.set_minor_formatter(day_formatter)
+    #ax.xaxis.set_major_formatter(hour_formatter)
+
+    #plot_day_summary(ax, quotes, ticksize=3)
+    #finance.candlestick_ohlc(ax, quotes, width=0.6)
+
+    #ax.xaxis_date()
+    #ax.autoscale_view()
+    #pyplot.setp(pyplot.gca().get_xticklabels(), rotation=45, horizontalalignment='right')
+
+    # determine number of days and create a list of those days
+    ndays = numpy.unique(numpy.trunc(quotes[:, 0]), return_index=True)
+    xdays = []
+    for n in numpy.arange(len(ndays[0])):
+        xdays.append(date.isoformat(num2date(quotes[ndays[1], 0][n])))
+
+    # creation of new data by replacing the time array with equally spaced values.
+    # this will allow to remove the gap between the days, when plotting the data
+    data2 = numpy.hstack([numpy.arange(quotes[:, 0].size)[:, numpy.newaxis], quotes[:, 1:]])
+
+    # plot the data
+    fig = pyplot.figure(figsize=(10, 5))
+    ax = fig.add_axes([0.1, 0.2, 0.85, 0.7])
+    # customization of the axis
+    ax.spines['right'].set_color('none')
+    ax.spines['top'].set_color('none')
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+    ax.tick_params(axis='both', direction='out', width=2, length=8,
+                   labelsize=12, pad=8)
+    ax.spines['left'].set_linewidth(2)
+    ax.spines['bottom'].set_linewidth(2)
+    # set the ticks of the x axis only when starting a new day
+    ax.set_xticks(data2[ndays[1], 0])
+    ax.set_xticklabels(xdays, rotation=45, horizontalalignment='right')
+
+    ax.set_ylabel('Quote ($)', size=20)
+    ax.set_ylim([98, 102])
+
+    #candlestick(ax, data2, width=0.5, colorup='g', colordown='r')
+    finance.candlestick_ohlc(ax, data2, width=0.6, colorup='g', colordown='r')
+
+    pyplot.show()
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(name)s:%(levelname)s:%(message)s')
     file_handler = logging.FileHandler('statarb.log', mode='w')
@@ -171,6 +241,8 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                      )
     args = parser.parse_args()
+    plot_ohlc()
+    sys.exit(0)
     with open('output/results.csv', 'w') as results_file:
         header = ['target_reached', 'timestamp', 'px_sell', 'profit', 'drawdown']
         writer = csv.DictWriter(results_file, fieldnames=header)
