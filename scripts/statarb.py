@@ -7,6 +7,8 @@ import random
 
 from decimal import Decimal
 
+from matplotlib import pyplot
+
 _RESOLUTION = 3
 
 
@@ -169,7 +171,7 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                      )
     args = parser.parse_args()
-    with open('results.csv', 'w') as results_file:
+    with open('output/results.csv', 'w') as results_file:
         header = ['target_reached', 'timestamp', 'px_sell', 'profit', 'drawdown']
         writer = csv.DictWriter(results_file, fieldnames=header)
         for i in range(100):
