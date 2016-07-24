@@ -1,5 +1,7 @@
 import csv
+import os
 import sys
+import tempfile
 from datetime import datetime, timedelta, date
 import math
 import argparse
@@ -8,6 +10,7 @@ import random
 
 from decimal import Decimal
 
+import numpy
 import pandas
 from matplotlib import pyplot
 
@@ -43,19 +46,20 @@ def fake_track_record_msec(init_time, init_value, annual_mu_pct, annual_sigma_pc
 
     :param init_time:
     :param init_value:
-    :param annual_mu_pct: annual drift assuming 250 business days in year
+    :param annual_mu_pct: annual drift assuming 365 days in year
     :param annual_sigma_pct:
     :return:
     """
     annual_mu = annual_mu_pct / 100
-    count_msec_per_year = 250 * 24 * 60 * 60 * 50
-    mu = math.pow(1 + annual_mu, 1 / count_msec_per_year) - 1
+    sample_duration_ms = 20
+    count_samples_per_year = 365 * 24 * 60 * 60 * 1000 / sample_duration_ms
+    mu = math.pow(1 + annual_mu, 1 / count_samples_per_year) - 1
     annual_sigma = (annual_sigma_pct / 100)
-    sigma = annual_sigma / math.sqrt(count_msec_per_year)
+    sigma = annual_sigma / math.sqrt(count_samples_per_year)
     current_time = init_time - timedelta(milliseconds=init_time.microsecond/1000)
     for bid, ask in random_walk(init_value, mu, sigma):
         logging.debug('bid ask = %.3f / %.3f', bid, ask)
-        current_time = current_time + timedelta(milliseconds=20)
+        current_time = current_time + timedelta(milliseconds=sample_duration_ms)
         yield current_time, bid, ask
 
 
@@ -121,6 +125,24 @@ def fake_ohlc_sample(init_time, init_value, mu_pct, sigma_pct, sample_unit='minu
         else:
             sample_px_high = max(sample_px_high, px_high)
             sample_px_low = min(sample_px_low, px_low)
+
+
+def generate_minutes_benchmarks(count=1000):
+    for i in range(count):
+        start_time = datetime(2010, 1, 1, 9)
+        output_dest = os.sep.join(['data', 'benchmark-minutes'])
+        samples = list()
+        for index, walker in enumerate(fake_ohlc_sample(start_time, 100., mu_pct=0, sigma_pct=20, sample_unit='minute')):
+            ts, px_open, px_high, px_low, px_close = walker
+            samples.append((px_open, px_high, px_low, px_close))
+            if index == 8 * 60 - 1:
+                break
+
+        if not os.path.exists(output_dest):
+            os.makedirs(output_dest)
+
+        with tempfile.NamedTemporaryFile(prefix='ohlc-', suffix='.bin', dir=output_dest, delete=False) as benchmark_file:
+            numpy.save(benchmark_file, numpy.array(samples))
 
 
 def run():
@@ -241,7 +263,7 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                      )
     args = parser.parse_args()
-    plot_ohlc()
+    generate_minutes_benchmarks()
     sys.exit(0)
     with open('output/results.csv', 'w') as results_file:
         header = ['target_reached', 'timestamp', 'px_sell', 'profit', 'drawdown']
