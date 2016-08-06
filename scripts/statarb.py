@@ -1,17 +1,26 @@
-import csv
-from datetime import timedelta
-import sys
-import os
-import random
-from datetime import datetime, date
 import argparse
 import logging
-
+import os
+import random
+import sys
+from datetime import datetime
+from datetime import timedelta
 from decimal import Decimal
 
 import numpy
+import pandas
+
+from matplotlib import pyplot
+from matplotlib.dates import DateFormatter, date2num
+from matplotlib import finance
+
+import ichimoku
 
 _RESOLUTION = 3
+
+
+def ohlc_as_df(sample_data):
+    return pandas.DataFrame(sample_data, columns=['ts','open','high', 'low', 'close']).set_index('ts')
 
 
 def load_ohlc_sample_minute(year, month, day, hour=9, minute=0):
@@ -19,7 +28,8 @@ def load_ohlc_sample_minute(year, month, day, hour=9, minute=0):
     samples = [name for name in os.listdir(path) if name.endswith('.bin')]
     data = numpy.load(os.path.sep.join(('data', 'benchmark-minutes', random.choice(samples))))
     ts_column = (numpy.arange(data.shape[0]) + 1) * timedelta(minutes=1) + datetime(year, month, day, hour, minute)
-    return numpy.insert(data, 0, ts_column, axis=1)
+    time_series = numpy.insert(data, 0, ts_column, axis=1)
+    return time_series
 
 
 def run():
@@ -54,20 +64,13 @@ def run():
     return {'target_reached': target_reached, 'timestamp': ts, 'px_sell': px_sell, 'profit': profit, 'drawdown': drawdown}
 
 
-def plot_ohlc():
-    from matplotlib import pyplot
-    from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY, date2num, num2date
-    from matplotlib import finance
-    import numpy
-
+def plot_ohlc(ohlc_series):
     quotes_list = list()
-    for walker in load_ohlc_sample_minute(2010, 1, 1, 9):
-        ts, px_open, px_high, px_low, px_close = walker
+    for ts, px_open, px_high, px_low, px_close in ohlc_series:
         quotes_list.append((date2num(ts), float(px_open), float(px_high), float(px_low), float(px_close)))
 
     quotes = numpy.array(quotes_list)
     pyplot.style.use('ggplot')
-
     fig, ax = pyplot.subplots(dpi=90)
     ax.ticklabel_format(useOffset=False)
     finance.candlestick_ohlc(ax, quotes, width=0.001, colorup='g', colordown='r')
@@ -75,7 +78,7 @@ def plot_ohlc():
     ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
     ax.autoscale_view()
     pyplot.setp(pyplot.gca().get_xticklabels(), rotation=30, ha='right')
-    pyplot.show()
+    return ax
 
 
 if __name__ == '__main__':
@@ -89,7 +92,14 @@ if __name__ == '__main__':
                                      )
     args = parser.parse_args()
     #print(load_ohlc_sample())
-    plot_ohlc()
+
+    ohlc_series = load_ohlc_sample_minute(2010, 1, 1, 9)
+    ohlc_df = ohlc_as_df(ohlc_series)
+    ax = plot_ohlc(ohlc_series)
+    components = ichimoku.components(ohlc_df)
+    components.plot(ax=ax)
+    pyplot.show()
+
     sys.exit(0)
     with open('output/results.csv', 'w') as results_file:
         header = ['target_reached', 'timestamp', 'px_sell', 'profit', 'drawdown']
