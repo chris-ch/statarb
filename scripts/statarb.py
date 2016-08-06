@@ -98,6 +98,7 @@ if __name__ == '__main__':
     ax = plot_ohlc(ohlc_series)
     components = ichimoku.components(ohlc_df)
     components.plot(ax=ax)
+    pyplot.fill_between(components.index, components['senkou-span-a'], components['senkou-span-b'], color='grey', alpha='0.5')
     pyplot.show()
 
     sys.exit(0)
