@@ -31,6 +31,11 @@ def senkou_span_b(ohlc_df):
 
 
 def components(ohlc_df):
+    """
+
+    :param ohlc_df:
+    :return: dataframe ('tenkan-sen', 'kijun-sen', 'senkou-span-a', 'senkou-span-b', 'chikou') indexed by timestamp
+    """
     ts = tenkan_sen(ohlc_df)
     ks = kijun_sen(ohlc_df)
     ssa = senkou_span_a(ts, ks)
