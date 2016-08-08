@@ -11,10 +11,11 @@ import numpy
 import pandas
 
 from matplotlib import pyplot
-from matplotlib.dates import DateFormatter, date2num
+from matplotlib.dates import DateFormatter, date2num, num2date
 from matplotlib import finance
 
 import ichimoku
+from intradaygoogle import get_google_finance_intraday
 
 _RESOLUTION = 3
 
@@ -64,9 +65,13 @@ def run():
     return {'target_reached': target_reached, 'timestamp': ts, 'px_sell': px_sell, 'profit': profit, 'drawdown': drawdown}
 
 
-def plot_ohlc(ohlc_series):
+def plot_ohlc(ohlc_df):
     quotes_list = list()
-    for ts, px_open, px_high, px_low, px_close in ohlc_series:
+    for ts, row in ohlc_df.iterrows():
+        px_open = row[0]
+        px_high = row[1]
+        px_low = row[2]
+        px_close = row[3]
         quotes_list.append((date2num(ts), float(px_open), float(px_high), float(px_low), float(px_close)))
 
     quotes = numpy.array(quotes_list)
@@ -91,14 +96,22 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                      )
     args = parser.parse_args()
-    #print(load_ohlc_sample())
 
     ohlc_series = load_ohlc_sample_minute(2010, 1, 1, 9)
     ohlc_df = ohlc_as_df(ohlc_series)
-    ax = plot_ohlc(ohlc_series)
+    ohlc_df = get_google_finance_intraday('AAPL', period=15 * 60, days=10)
+    ax = plot_ohlc(ohlc_df)
+    long_trades, short_trades = ichimoku.long_short_rules_1(ohlc_df)
     components = ichimoku.components(ohlc_df)
     styles = ['#3399ff', '#004c99', '#c0c0c0', '#808080', '#cccc00']
     components.plot(ax=ax, style=styles)
+
+    for trade_start, trade_end in long_trades:
+        pyplot.axvspan(trade_start, trade_end, facecolor='g', alpha=0.5)
+
+    for trade_start, trade_end in short_trades:
+        pyplot.axvspan(trade_start, trade_end, facecolor='r', alpha=0.5)
+
     pyplot.fill_between(components.index, components['senkou-span-a'], components['senkou-span-b'],
                         where=components['senkou-span-b'] >= components['senkou-span-a'],
                         color='red', alpha='0.4')
@@ -108,9 +121,3 @@ if __name__ == '__main__':
     pyplot.show()
 
     sys.exit(0)
-    with open('output/results.csv', 'w') as results_file:
-        header = ['target_reached', 'timestamp', 'px_sell', 'profit', 'drawdown']
-        writer = csv.DictWriter(results_file, fieldnames=header)
-        for i in range(100):
-            result = run()
-            writer.writerow(result)
