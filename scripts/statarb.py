@@ -96,6 +96,7 @@ if __name__ == '__main__':
     ohlc_series = load_ohlc_sample_minute(2010, 1, 1, 9)
     ohlc_df = ohlc_as_df(ohlc_series)
     ax = plot_ohlc(ohlc_series)
+    ichimoku.long_short_rules_1(ohlc_df)
     components = ichimoku.components(ohlc_df)
     styles = ['#3399ff', '#004c99', '#c0c0c0', '#808080', '#cccc00']
     components.plot(ax=ax, style=styles)
