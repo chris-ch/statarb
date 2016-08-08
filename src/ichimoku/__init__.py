@@ -73,8 +73,19 @@ def long_short_rules_1(ohlc_df):
     ichimoku_components = components(ohlc_df)
     mid_prices = (ohlc_df['high'] + ohlc_df['low']) / 2
     kumo =ichimoku_components[['senkou-span-a', 'senkou-span-b']].max(axis=1)
+
     prices_above_kumo = (mid_prices.astype(numpy.float64) - kumo) >= 0
     tenkan_above_kijun = ichimoku_components['tenkan-sen'] >= ichimoku_components['kijun-sen']
     chikou_above_lagged_price = (mid_prices.astype(numpy.float64) - ichimoku_components['chikou']) >= 0
-    kumo_ahead_bullish = ichimoku_components['senkou-span-b'] >= ichimoku_components['senkou-span-a']
-    return prices_above_kumo & tenkan_above_kijun & chikou_above_lagged_price & kumo_ahead_bullish
+    kumo_ahead_bullish = ichimoku_components['senkou-span-a'] >= ichimoku_components['senkou-span-b']
+    bullish = prices_above_kumo & tenkan_above_kijun & chikou_above_lagged_price & kumo_ahead_bullish
+
+    prices_below_kumo = (mid_prices.astype(numpy.float64) - kumo) < 0
+    tenkan_below_kijun = ichimoku_components['tenkan-sen'] < ichimoku_components['kijun-sen']
+    chikou_below_lagged_price = (mid_prices.astype(numpy.float64) - ichimoku_components['chikou']) < 0
+    kumo_ahead_bearish = ichimoku_components['senkou-span-a'] < ichimoku_components['senkou-span-b']
+    bearish = prices_below_kumo & tenkan_below_kijun & chikou_below_lagged_price & kumo_ahead_bearish
+
+    long_short = bullish.map(lambda value: (0, 1)[value]) + bearish.map(lambda value: (0, -1)[value])
+
+    return long_short

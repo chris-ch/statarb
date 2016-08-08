@@ -96,10 +96,13 @@ if __name__ == '__main__':
     ohlc_series = load_ohlc_sample_minute(2010, 1, 1, 9)
     ohlc_df = ohlc_as_df(ohlc_series)
     ax = plot_ohlc(ohlc_series)
-    ichimoku.long_short_rules_1(ohlc_df)
+    long_short = ichimoku.long_short_rules_1(ohlc_df)
     components = ichimoku.components(ohlc_df)
     styles = ['#3399ff', '#004c99', '#c0c0c0', '#808080', '#cccc00']
     components.plot(ax=ax, style=styles)
+    pyplot.fill_between(components.index, 99, 101, where=long_short == 1, facecolor='blue', alpha=0.5)
+    #pyplot.axvspan(1.25, 1.55, facecolor='g', alpha=0.5)
+    pyplot.fill_between(components.index, 99, 101, where=long_short == -1, facecolor='orange', alpha=0.5)
     pyplot.fill_between(components.index, components['senkou-span-a'], components['senkou-span-b'],
                         where=components['senkou-span-b'] >= components['senkou-span-a'],
                         color='red', alpha='0.4')
@@ -109,9 +112,3 @@ if __name__ == '__main__':
     pyplot.show()
 
     sys.exit(0)
-    with open('output/results.csv', 'w') as results_file:
-        header = ['target_reached', 'timestamp', 'px_sell', 'profit', 'drawdown']
-        writer = csv.DictWriter(results_file, fieldnames=header)
-        for i in range(100):
-            result = run()
-            writer.writerow(result)
