@@ -1,3 +1,18 @@
+"""
+2 Step Process for Entering a Trade with Ichimoku
+
+Many of you who have read the weekly Ichimoku reports or attended the DailyFX Plus webinars are familiar with
+the checklist we refer to before entering a trade with Ichimoku. This checklist will let us know if we’re looking
+at a high probability buying opportunity (opposite applies for sell trades):
+
+-Price is above the Kumo Cloud
+
+-The trigger line (black line on my chart) is above the base line (baby blue line) or has crossed above
+
+-Lagging line is above price action from 26 periods ago (above the cloud is the additional filter)
+
+-Kumo ahead of price is bullish and rising (displayed as a blue cloud). This is currently not fulfilled.
+"""
 import pandas
 
 
