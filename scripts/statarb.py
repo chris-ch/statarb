@@ -25,9 +25,9 @@ def ohlc_as_df(sample_data):
 
 
 def load_ohlc_sample_minute(year, month, day, hour=9, minute=0):
-    path = os.path.sep.join(('data', 'benchmark-minutes'))
+    path = os.path.sep.join(('data', 'benchmarks'))
     samples = [name for name in os.listdir(path) if name.endswith('.bin')]
-    data = numpy.load(os.path.sep.join(('data', 'benchmark-minutes', random.choice(samples))))
+    data = numpy.load(os.path.sep.join((path, random.choice(samples))))
     ts_column = (numpy.arange(data.shape[0]) + 1) * timedelta(minutes=1) + datetime(year, month, day, hour, minute)
     time_series = numpy.insert(data, 0, ts_column, axis=1)
     return time_series
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     ohlc_series = load_ohlc_sample_minute(2010, 1, 1, 9)
     ohlc_df = ohlc_as_df(ohlc_series)
-    ohlc_df = get_google_finance_intraday('AAPL', period=15 * 60, days=10)
+    #ohlc_df = get_google_finance_intraday('AAPL', period=15 * 60, days=10)
     ax = plot_ohlc(ohlc_df)
     long_trades, short_trades = ichimoku.long_short_rules_1(ohlc_df)
     components = ichimoku.components(ohlc_df)
